@@ -33,7 +33,7 @@ contract VestingWalletFactory is Ownable {
       uint256 vestginAmount = vestingAmounts[index];
 
       require(beneficiary != address(0), 'Zero address');
-      require(vestginAmount > 0, 'Invalid amount');
+      require(vestginAmount != 0, 'Invalid amount');
 
       VestingWallet wallet = new VestingWallet(beneficiary, startTimestamp, durationSeconds);
       SafeERC20.safeTransferFrom(IERC20(token), tokenHolder, address(wallet), vestginAmount);
