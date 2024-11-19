@@ -4,6 +4,8 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import {
   LevvaToken,
   LevvaToken__factory,
+  Staking,
+  Staking__factory,
   VestingWalletFactory,
   VestingWalletFactory__factory,
 } from '../typechain-types';
@@ -57,7 +59,7 @@ task('deploy', 'Deploy token')
       [contractId]: {
         address: contractAddress,
         txHash,
-        blockNumber: startBlockNumber,
+        blockNumber: deploymentTx.blockNumber!,
       },
     };
 
@@ -73,6 +75,8 @@ task('deploy', 'Deploy token')
     console.log(`Done!`);
   });
 
+// Example:
+// npx hardhat --network holesky --config hardhat.config.ts deploy-vesting-factory --signer <private-key>
 task('deploy-vesting-factory', 'Deploy vesting factory')
   .addParam<string>('signer', 'Private key of contracts creator')
   .setAction(async (taskArgs: DeployArgs, hre: HardhatRuntimeEnvironment) => {
@@ -103,7 +107,7 @@ task('deploy-vesting-factory', 'Deploy vesting factory')
       [contractId]: {
         address: contractAddress,
         txHash,
-        blockNumber: startBlockNumber,
+        blockNumber: deploymentTx.blockNumber!,
       },
     };
 
@@ -184,6 +188,63 @@ task('deploy-create3', 'Deploy token')
 
     // console.log(`Spent for deploy: ${formatEther(balanceBefore - balanceAfter)} Eth`);
     // console.log(`Done!`);
+  });
+
+// Example:
+// npx hardhat --network holesky --config hardhat.config.ts deploy-open-staking --signer <private-key>
+task('deploy-open-staking', 'Deploy open staking contract')
+  .addParam<string>('signer', 'Private key of contracts creator')
+  .setAction(async (taskArgs: DeployArgs, hre: HardhatRuntimeEnvironment) => {
+    const provider = hre.ethers.provider;
+
+    const startBlockNumber = await provider.getBlockNumber();
+    const networkName = hre.network.name;
+    const configDir = `../deploy/${hre.network.name}`;
+
+    console.log(`Deploy on network "${networkName}"`);
+    console.log(`Current block number is ${startBlockNumber}\n\n`);
+
+    let signer = new hre.ethers.Wallet(taskArgs.signer, provider);
+
+    const balanceBefore = await signer.provider!.getBalance(signer);
+    console.log(`Balance before: ${formatEther(balanceBefore)} Eth`);
+
+    // Open Staking arguments
+    const APY: number = 0; // 0%
+    const LOCK: number = 31_536_000; // 365 * 24 * 60 * 60 - 1 year
+    const TOKEN: string = '0x4123a133ae3c521FD134D7b13A2dEC35b56c2463'; //OPEN token
+    const owner: string = '0xea42f017a9D962019E36ce4D7d376D0421855b66'; //LVVA owner
+    const vault: string = '0x4fBc79d384235e59574A2ebB6c721E4B939Ce188'; // prev open staking parameter
+
+    const contractId = 'OpenStaking';
+    const staking = (await new Staking__factory(signer).deploy(TOKEN, owner, vault, APY, LOCK, {
+      gasLimit: 2_000_000,
+      gasPrice: 11_000_000_000,
+    })) as any as Staking;
+    const stakingAddress = await staking.getAddress();
+    const stakingDeploymentTx = staking.deploymentTransaction()!;
+    await staking.waitForDeployment();
+    const stakingTxReceipt = await stakingDeploymentTx.wait();
+    const stakingTxHash = stakingDeploymentTx.hash;
+
+    await verifyContract(hre, stakingAddress, [TOKEN, owner, vault, APY, LOCK]);
+
+    const deploymentData = {
+      [contractId]: {
+        address: await staking.getAddress(),
+        txHash: stakingTxHash,
+        blockNumber: stakingDeploymentTx.blockNumber!,
+      },
+    };
+
+    await saveDeploymentData(contractId, deploymentData, configDir);
+
+    const balanceAfter = await signer.provider!.getBalance(signer);
+    console.log(`Balance after: ${formatEther(balanceAfter)} Eth`);
+    console.log(`Gas used for deploy: ${stakingTxReceipt?.gasUsed} gas`);
+
+    console.log(`Spent for deploy: ${formatEther(balanceBefore - balanceAfter)} Eth`);
+    console.log(`Done!`);
   });
 
 async function saveDeploymentData(

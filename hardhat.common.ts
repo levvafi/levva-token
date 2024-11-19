@@ -20,14 +20,6 @@ const config: HardhatUserConfig & { contractSizer: any } = {
       },
     ],
   },
-  networks: {
-    ethereum: {
-      url: 'https://rpc.ankr.com/eth',
-    },
-    holesky: {
-      url: 'https://1rpc.io/holesky',
-    },
-  },
   etherscan: {
     apiKey: process.env.API_KEY,
   },
@@ -39,7 +31,7 @@ const config: HardhatUserConfig & { contractSizer: any } = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: false,
-    only: ['Levva', 'Vesting'],
+    only: ['Levva', 'Vesting', 'Staking'],
     except: ['Mock', 'Test'],
   },
   sourcify: {

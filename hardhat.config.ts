@@ -7,14 +7,6 @@ import './tasks/vesting';
 const config = {
   ...defaultConfig.default,
   networks: {
-    hardhat: {
-      forking: {
-        enabled: true,
-        url: 'https://1rpc.io/holesky',
-      },
-      initialBaseFeePerGas: 0,
-      allowBlocksWithSameTimestamp: true,
-    },
     ethereum: {
       url: 'https://rpc.ankr.com/eth',
     },
