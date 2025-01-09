@@ -216,6 +216,27 @@ task('deploy-open-staking', 'Deploy open staking contract')
     const owner: string = '0xea42f017a9D962019E36ce4D7d376D0421855b66'; //LVVA owner
     const vault: string = '0x4fBc79d384235e59574A2ebB6c721E4B939Ce188'; // prev open staking parameter
 
+
+    // const TOKEN: string = '0xaC3a8f70C421849Da72136DC7C8883984C2653B6'; // LVVA token
+    // const owner: string = '0xea42f017a9D962019E36ce4D7d376D0421855b66'; // LVVA owner
+    // const vault: string = '0x8dD5C9A136E1AbD616620ab4EFdFBfeCfc28b180'; // Levva Treasury
+
+    // LevvaStaking 1 month
+    // const contractId = 'LevvaStaking-1month';
+    // const APY: number = 10; // 10%
+    // const LOCK: number = 31_536_000; // 30 * 24 * 60 * 60 - 1 month
+
+    // LevvaStaking 6 month
+    // const contractId = 'LevvaStaking-6months';
+    // const APY: number = 30; // 30%
+    // const LOCK: number = 15_552_000; // 6 * 30 * 24 * 60 * 60 - 6 months
+
+    // LevvaStaking 1 year
+    // const contractId = 'LevvaStaking-1year';
+    // const APY: number = 50; // 50%
+    // const LOCK: number = 31_536_000; // 365 * 24 * 60 * 60 - 1 year
+
+
     const contractId = 'OpenStaking';
     const staking = (await new Staking__factory(signer).deploy(TOKEN, owner, vault, APY, LOCK, {
       gasLimit: 2_000_000,

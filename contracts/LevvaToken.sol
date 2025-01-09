@@ -6,20 +6,22 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol';
+import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol';
 
 contract LevvaToken is ERC20, Ownable, ERC20Permit, ERC20Burnable {
-  constructor(address initialOwner) ERC20('Levva', 'LVVA') Ownable(initialOwner) ERC20Permit('Levva') {
-    uint256 oneToken = 10 ** decimals();
+  error MaxSupplyExceeded();
 
-    _mint(address(0xb991d9E249961fd2300C4232ac306Edd41381494), 36_000_000 * oneToken); //36M Team
-    _mint(address(0x941dbf5404Feb2D6831AaeA6F97aA9AEa87B3Bd3), 30_000_000 * oneToken); //30M Investors
-    _mint(address(0x0EAEB48D8eF5b4e47cFa6C8496b7F20d62326A65), 10_000_000 * oneToken); //10M Sale
-    _mint(address(0x8dD5C9A136E1AbD616620ab4EFdFBfeCfc28b180), 30_360_000 * oneToken); //30.36M Treasury
-    _mint(address(0xBAB11696FcF11219F61051f5B143F98483BBb804), 50_000_000 * oneToken); //50M Incentives
-    _mint(address(0x55f33E3dE879268d73874d05d17B05BFb7b5AEDA), 43_640_000 * oneToken); //43.64M Airdrop
+  uint256 public constant MAX_SUPPLY = 2_000_000_000e18;
+
+  constructor(address initialOwner) ERC20('Levva Protocol Token', 'LVVA') Ownable(initialOwner) ERC20Permit('Levva') {
+    _mint(address(0xAFbFb590D65d7E8E15532217e59A48A751a81361), 1_000_000_000e18); //1B Swap
+    _mint(address(0x9D62FF0aBA56A4633861565DF657c759631Fb83C), 62_500_000e18); //62.5M Token Sale
+    _mint(address(0xdcf1683a80259d09228CC24DfC061cC03A635614), 62_500_000e18); //62.5M Airdrop
+    _mint(address(0x97B7A89C8f80CA87bD718Fc3c667f43a17f82B11), 125_000_000e18); //125M Treasury
   }
 
   function mint(address to, uint256 amount) public onlyOwner {
+    require(totalSupply() + amount <= MAX_SUPPLY, MaxSupplyExceeded());
     _mint(to, amount);
   }
 }
