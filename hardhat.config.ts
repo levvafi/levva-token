@@ -3,7 +3,6 @@ import 'hardhat-contract-sizer';
 import * as defaultConfig from './hardhat.common';
 import './tasks/deploy';
 import './tasks/vesting';
-import './tasks/stat';
 
 const config = {
   ...defaultConfig.default,
