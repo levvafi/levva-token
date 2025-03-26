@@ -31,7 +31,7 @@ const config: HardhatUserConfig & { contractSizer: any } = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: false,
-    only: ['Levva', 'Vesting', 'Staking'],
+    only: ['Levva', 'Vesting', 'Staking', 'TokenMinter'],
     except: ['Mock', 'Test'],
   },
   sourcify: {
