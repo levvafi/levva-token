@@ -179,8 +179,8 @@ contract Staking is Ownable, Pausable, ReentrancyGuard {
 
     data.lockStart = userLock[_user];
     data.lockRemaining = remaining;
-    data.balance = userBalanceInitial[msg.sender];
-    data.rewards = pendingRewards(_user);
+    data.balance = userBalanceInitial[_user];
+    data.rewards = pendingRewards(block.timestamp, _user);
 
     return data;
   }
@@ -192,20 +192,20 @@ contract Staking is Ownable, Pausable, ReentrancyGuard {
    */
   function updateIndex() internal {
     if (block.timestamp > lastUpdateTime) {
-      compoundIndex = calculateUpdatedIndex();
+      compoundIndex = calculateUpdatedIndex(block.timestamp);
       lastUpdateTime = block.timestamp;
     }
   }
 
   /*
-   * Internal function to calculate the pending rewards of a user
+   * Helper function to calculate the pending rewards of a user
    * @param _user user to calculate rewards for
    */
-  function pendingRewards(address _user) internal view returns (uint256) {
+  function pendingRewards(uint256 _timestamp, address _user) public view returns (uint256) {
     uint256 userStakedAmount = userBalanceInitial[_user];
     if (userStakedAmount == 0) return 0;
 
-    uint256 currentCompoundIndex = calculateUpdatedIndex();
+    uint256 currentCompoundIndex = calculateUpdatedIndex(_timestamp);
     uint256 userCompoundBalance = (userBalance[_user] * currentCompoundIndex) / ONE;
     if (userCompoundBalance < userStakedAmount) {
       // In case of rounding error userCompoundBalance could be less than initial amount
@@ -216,8 +216,10 @@ contract Staking is Ownable, Pausable, ReentrancyGuard {
     return rewards;
   }
 
-  function calculateUpdatedIndex() internal view returns (uint256 indexUpdated) {
-    uint256 timeElapsed = block.timestamp - lastUpdateTime;
+  function calculateUpdatedIndex(uint256 timestamp) internal view returns (uint256 indexUpdated) {
+    require(timestamp >= lastUpdateTime, 'Invalid timestamp');
+
+    uint256 timeElapsed = timestamp - lastUpdateTime;
     uint256 _compoundIndex = compoundIndex;
     indexUpdated = _compoundIndex + (_compoundIndex * uint256(apy) * timeElapsed) / (APY_ONE * YEAR);
   }
