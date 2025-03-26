@@ -1,11 +1,12 @@
 import { task } from 'hardhat/config';
-import { ContractTransactionReceipt, ethers, formatEther, Provider, toUtf8Bytes } from 'ethers';
+import { ContractTransactionReceipt, ethers, formatEther, parseEther, Provider, toUtf8Bytes } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { LevvaToken, LevvaToken__factory, Staking, Staking__factory } from '../typechain-types';
+import { ERC20__factory, LevvaToken, LevvaToken__factory, Staking, Staking__factory } from '../typechain-types';
 import * as fs from 'fs';
 import path from 'path';
 import { CREATE_X_ABI, CREATE_X_ADDRESS } from './createX';
 import { getSigner, SignerArgs, taskWithSigner, verifyContract } from './utils';
+import { Console } from 'console';
 
 interface DeployArgs {
   signer: string;
@@ -20,11 +21,11 @@ interface DeploymentData {
 }
 
 // Example:
-// npx hardhat --network hardhat --config hardhat.config.ts deploy-token --signer <private-key>
-task('deploy', 'Deploy token')
-  .addParam<string>('signer', 'Private key of contracts creator')
-  .setAction(async (taskArgs: DeployArgs, hre: HardhatRuntimeEnvironment) => {
+// npx hardhat --network sepolia --config hardhat.config.ts deploy-token --keystore <keystore-file>
+taskWithSigner('deploy-token', 'Deploy token').setAction(
+  async (taskArgs: DeployArgs, hre: HardhatRuntimeEnvironment) => {
     const provider = hre.ethers.provider;
+    const signer = await getSigner(taskArgs, provider);
 
     const startBlockNumber = await provider.getBlockNumber();
     const networkName = hre.network.name;
@@ -33,12 +34,10 @@ task('deploy', 'Deploy token')
     console.log(`Deploy on network "${networkName}"`);
     console.log(`Current block number is ${startBlockNumber}\n\n`);
 
-    let signer = new hre.ethers.Wallet(taskArgs.signer, provider);
-
     const balanceBefore = await signer.provider!.getBalance(signer);
     console.log(`Balance before: ${formatEther(balanceBefore)} Eth`);
 
-    const owner = '0xea42f017a9D962019E36ce4D7d376D0421855b66'; // set owner address
+    const owner = signer.address; // set owner address
 
     const contractId = 'LevvaToken';
     const token = (await new LevvaToken__factory(signer).deploy(owner)) as any as LevvaToken;
@@ -67,9 +66,10 @@ task('deploy', 'Deploy token')
 
     console.log(`Spent for deploy: ${formatEther(balanceBefore - balanceAfter)} Eth`);
     console.log(`Done!`);
-  });
+  }
+);
 
-// Example: npx hardhat --network holesky --config hardhat.config.ts deploy-levva-staking --keystore <keystore-file>
+// Example: npx hardhat --network sepolia --config hardhat.config.ts deploy-levva-staking --keystore <keystore-file>
 taskWithSigner('deploy-levva-staking', 'Deploy Levva Staking smart contract').setAction(
   async (taskArgs: SignerArgs, hre: HardhatRuntimeEnvironment) => {
     const provider: Provider = hre.ethers.provider;
@@ -89,6 +89,10 @@ taskWithSigner('deploy-levva-staking', 'Deploy Levva Staking smart contract').se
     const TOKEN: string = '0x6243558a24CC6116aBE751f27E6d7Ede50ABFC76'; //LEVVA token
     const owner: string = '0xea42f017a9D962019E36ce4D7d376D0421855b66'; //owner
     const vault: string = '0xea42f017a9D962019E36ce4D7d376D0421855b66'; //vault
+
+    // const TOKEN: string = '0x948e00E3c38b714246814727e3DA84ab6A6C2486';
+    // const owner: string = signer.address;
+    // const vault: string = signer.address;
 
     // const APY: number = 120; // 120%
     // const LOCK: number = 2628000; // 1 month

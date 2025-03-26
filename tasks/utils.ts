@@ -76,7 +76,7 @@ export async function verifyContract(hre: HardhatRuntimeEnvironment, address: st
   const isDryRun = hre.config.networks.hardhat.forking !== undefined;
   if (isDryRun) return;
 
-  await delay(5000);
+  await delay(25_000);
 
   console.log(`Verify contract ${address} with constructor arguments: ${constructorArguments}`);
 
