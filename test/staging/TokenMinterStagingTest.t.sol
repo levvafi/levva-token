@@ -30,7 +30,8 @@ contract TokenMinterStagingTest is Test {
 
   TokenMinter.Allocation[] public initialAllocations;
 
-  function setUp() public onlyOnMainnetFork {
+  function setUp() public {
+    vm.skip(!isEthMainnet());
     vm.warp(weeklySchedule.startTime + 1);
 
     initialAllocations.push(TokenMinter.Allocation({recipient: RECIPIENT1, share: 73_33 * 10 ** 14}));
@@ -48,14 +49,11 @@ contract TokenMinterStagingTest is Test {
     vm.deal(OPERATOR, 1 ether);
   }
 
-  modifier onlyOnMainnetFork() {
-    if (block.chainid != 1) {
-      return;
-    }
-    _;
+  function isEthMainnet() public view returns (bool) {
+    return block.chainid == 1;
   }
 
-  function testMint() public onlyOnMainnetFork {
+  function testMint() public {
     vm.startPrank(OPERATOR);
 
     TokenMinter.MintConfig memory config = tokenMinter.getMintConfig();
@@ -70,6 +68,47 @@ contract TokenMinterStagingTest is Test {
 
       vm.warp(block.timestamp + config.periodLength + 1);
       vm.roll(block.number + 1);
+    }
+
+    uint256 balanceAfter1 = token.balanceOf(RECIPIENT1);
+    uint256 balanceAfter2 = token.balanceOf(RECIPIENT2);
+    uint256 balanceAfter3 = token.balanceOf(RECIPIENT3);
+
+    totalMintedAmount =
+      balanceAfter1 -
+      balanceBefore1 +
+      balanceAfter2 -
+      balanceBefore2 +
+      balanceAfter3 -
+      balanceBefore3;
+
+    assertEq(totalMintedAmount, config.mintAmount * config.maxCountOfMints);
+
+    vm.stopPrank();
+  }
+
+  function testMintWithSkipPeriods() public {
+    vm.startPrank(OPERATOR);
+
+    TokenMinter.MintConfig memory config = tokenMinter.getMintConfig();
+    uint256 totalMintedAmount = 0;
+
+    uint256 balanceBefore1 = token.balanceOf(RECIPIENT1);
+    uint256 balanceBefore2 = token.balanceOf(RECIPIENT2);
+    uint256 balanceBefore3 = token.balanceOf(RECIPIENT3);
+
+    uint256 periodCounter = 0;
+    uint256 mintCount = tokenMinter.getMintCount();
+    while (mintCount < config.maxCountOfMints) {
+      if (periodCounter % 2 == 0) {
+        tokenMinter.mint();
+      }
+
+      vm.warp(block.timestamp + config.periodLength + 1);
+      vm.roll(block.number + 1);
+
+      mintCount = tokenMinter.getMintCount();
+      periodCounter++;
     }
 
     uint256 balanceAfter1 = token.balanceOf(RECIPIENT1);

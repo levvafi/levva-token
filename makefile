@@ -10,7 +10,7 @@ help:
 	@echo ""
 	@echo "  make stageTest"
 
-build :; forge build
+build :; forge build --sizes
 
 test :; forge test -vvv
 

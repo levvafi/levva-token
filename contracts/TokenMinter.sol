@@ -149,14 +149,14 @@ contract TokenMinter is Ownable2Step {
   /// Updates allocations
   /// @dev Only owner can update allocations
   /// @param allocations List of allocations
-  function updateAllocations(Allocation[] memory allocations) external onlyOwner {
+  function updateAllocations(Allocation[] calldata allocations) external onlyOwner {
     _updateAllocations(allocations);
   }
 
   /// Updates minting configuration
   /// @dev Only owner can update minting configuration
   /// @param mintConfig New minting configuration
-  function updateMintConfig(MintConfig memory mintConfig) external onlyOwner {
+  function updateMintConfig(MintConfig calldata mintConfig) external onlyOwner {
     _updateMintConfig(mintConfig);
   }
 
@@ -197,7 +197,7 @@ contract TokenMinter is Ownable2Step {
 
   function _updateAllocations(Allocation[] memory allocations) private {
     uint256 totalShare = 0;
-    for (uint256 i = 0; i < allocations.length; ) {
+    for (uint256 i; i < allocations.length; ) {
       if (allocations[i].recipient == address(0)) revert TokenMinter__InvalidAddress();
 
       totalShare += allocations[i].share;
@@ -222,12 +222,10 @@ contract TokenMinter is Ownable2Step {
     uint256 curPeriodBegin = (block.timestamp / mintConfig.periodLength) *
       mintConfig.periodLength +
       mintConfig.periodShift;
-    uint256 curPeriodEnd = curPeriodBegin + mintConfig.periodLength;
 
     if (block.timestamp < mintConfig.startTime) return false;
 
-    uint256 lastMintTime = s_lastMintTime;
-    if (lastMintTime >= curPeriodBegin && lastMintTime < curPeriodEnd) return false;
+    if (s_lastMintTime >= curPeriodBegin) return false;
 
     return true;
   }
