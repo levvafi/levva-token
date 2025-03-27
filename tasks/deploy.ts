@@ -1,7 +1,15 @@
 import { task } from 'hardhat/config';
-import { ContractTransactionReceipt, ethers, formatEther, parseEther, Provider, toUtf8Bytes } from 'ethers';
+import { ContractTransactionReceipt, ethers, formatEther, parseEther, parseUnits, Provider, toUtf8Bytes } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { ERC20__factory, LevvaToken, LevvaToken__factory, Staking, Staking__factory } from '../typechain-types';
+import {
+  ERC20__factory,
+  LevvaToken,
+  LevvaToken__factory,
+  Staking,
+  Staking__factory,
+  TokenMinter,
+  TokenMinter__factory,
+} from '../typechain-types';
 import * as fs from 'fs';
 import path from 'path';
 import { CREATE_X_ABI, CREATE_X_ADDRESS } from './createX';
@@ -204,6 +212,84 @@ task('deploy-open-staking', 'Deploy open staking contract')
     const balanceAfter = await signer.provider!.getBalance(signer);
     console.log(`Balance after: ${formatEther(balanceAfter)} Eth`);
     console.log(`Gas used for deploy: ${stakingTxReceipt?.gasUsed} gas`);
+
+    console.log(`Spent for deploy: ${formatEther(balanceBefore - balanceAfter)} Eth`);
+    console.log(`Done!`);
+  });
+
+// Example:
+// npx hardhat --network sepolia --config hardhat.config.ts deploy-token-minter --signer <private-key>
+task('deploy-token-minter', 'Deploy token minter contract')
+  .addParam<string>('signer', 'Private key of contracts creator')
+  .setAction(async (taskArgs: DeployArgs, hre: HardhatRuntimeEnvironment) => {
+    const provider = hre.ethers.provider;
+
+    const startBlockNumber = await provider.getBlockNumber();
+    const networkName = hre.network.name;
+    const configDir = `../deploy/${hre.network.name}`;
+
+    console.log(`Deploy on network "${networkName}"`);
+    console.log(`Current block number is ${startBlockNumber}\n\n`);
+
+    let signer = new hre.ethers.Wallet(taskArgs.signer, provider);
+
+    const balanceBefore = await signer.provider!.getBalance(signer);
+    console.log(`Balance before: ${formatEther(balanceBefore)} Eth`);
+
+    // Contract arguments
+    const LEVVA_TOKEN: string = '0x6243558a24CC6116aBE751f27E6d7Ede50ABFC76'; //LVVA token
+    const initialOwner: string = '0x32764Ce6edBb6BF39A824cc95246375067c4573e'; //LVVA owner
+    const mintConfig: TokenMinter.MintConfigStruct = {
+      startTime: 1742774400n,
+      periodLength: 604800n,
+      periodShift: 345600n,
+      maxCountOfMints: 52,
+      mintAmount: parseUnits('7211538.46', 18), // 7_211_538.46
+    };
+    const initialAllocations: TokenMinter.AllocationStruct[] = [
+      {
+        recipient: '0xD20092A19e0488E1283E488e11583B43ba7EA849',
+        share: parseUnits('0.7334', 18), //73.33%
+      },
+      {
+        recipient: '0x1D7e811aAbddDFd05a97A49C53645Db54deC0ac1',
+        share: parseUnits('0.1333', 18), //13.33%
+      },
+      {
+        recipient: '0x4BB712660a5D16Fd38Bbf6Ede35235071B487dFD',
+        share: parseUnits('0.1333', 18), //13.34%
+      },
+    ];
+
+    const contractId = 'TokenMinter';
+    const tokenMinter = (await new TokenMinter__factory(signer).deploy(
+      LEVVA_TOKEN,
+      initialOwner,
+      mintConfig,
+      initialAllocations
+    )) as any as TokenMinter;
+    const tokenMinterAddress = await tokenMinter.getAddress();
+    const tokenMinterDeploymentTx = tokenMinter.deploymentTransaction()!;
+    await tokenMinter.waitForDeployment();
+
+    const txReceipt = await tokenMinterDeploymentTx.wait();
+    const txHash = tokenMinterDeploymentTx.hash;
+
+    await verifyContract(hre, tokenMinterAddress, [LEVVA_TOKEN, initialOwner, mintConfig, initialAllocations]);
+
+    const deploymentData = {
+      [contractId]: {
+        address: await tokenMinter.getAddress(),
+        txHash: txHash,
+        blockNumber: tokenMinterDeploymentTx.blockNumber!,
+      },
+    };
+
+    await saveDeploymentData(contractId, deploymentData, configDir);
+
+    const balanceAfter = await signer.provider!.getBalance(signer);
+    console.log(`Balance after: ${formatEther(balanceAfter)} Eth`);
+    console.log(`Gas used for deploy: ${txReceipt?.gasUsed} gas`);
 
     console.log(`Spent for deploy: ${formatEther(balanceBefore - balanceAfter)} Eth`);
     console.log(`Done!`);

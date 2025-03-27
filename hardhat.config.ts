@@ -2,7 +2,6 @@ import '@nomicfoundation/hardhat-toolbox';
 import 'hardhat-contract-sizer';
 import * as defaultConfig from './hardhat.common';
 import './tasks/deploy';
-import './tasks/vesting';
 
 const config = {
   ...defaultConfig.default,
