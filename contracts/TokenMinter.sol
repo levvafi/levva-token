@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import '@openzeppelin/contracts/access/Ownable2Step.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {Ownable, Ownable2Step} from '@openzeppelin/contracts/access/Ownable2Step.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 interface IERC20Mintable {
   function mint(address to, uint256 amount) external;
@@ -10,7 +10,7 @@ interface IERC20Mintable {
 
 /// @title Token minter contract
 /// @author EqLab
-/// @notice Contract that allows to mint tokens according to the specified schedule
+/// @notice Contract that allows to mint tokens according to a specified schedule.
 contract TokenMinter is Ownable2Step {
   /* Type declarations */
   struct MintConfig {
@@ -47,29 +47,28 @@ contract TokenMinter is Ownable2Step {
   MintConfig private s_mintConfig;
 
   /// @dev Time of the last mint in seconds
-  uint256 private s_lastMintTime;
+  uint128 private s_lastMintTime;
 
   /// @dev Counter of the mint operations
-  uint32 private s_mintCounter;
+  uint32 private s_mintCount;
 
   /// @dev List of allocations
   Allocation[] private s_allocations;
 
   /* Events */
-  event OperatorAdded(address indexed operator);
-  event OperatorRemoved(address indexed operator);
-  event Mint(uint256 amount, uint256 mintCounter);
+  event OperatorChanged(address indexed operator, bool added);
+  event Mint(uint256 amount, uint256 mintCount);
 
   /* Errors */
-  error AdminContract__InvalidAddress();
-  error AdminContract__Unauthorized();
-  error AdminContract__WrongAllocationsShare();
-  error AdminContract__MintNotAvailable();
-  error AdminContract__InvalidMintConfig();
+  error TokenMinter__InvalidAddress();
+  error TokenMinter__Unauthorized();
+  error TokenMinter__InvalidShares();
+  error TokenMinter__MintNotAvailable();
+  error TokenMinter__InvalidMintConfig();
 
   /* Modifiers */
   modifier onlyOperator() {
-    ensureOperator(msg.sender);
+    _ensureOperator(msg.sender);
     _;
   }
 
@@ -84,8 +83,8 @@ contract TokenMinter is Ownable2Step {
     MintConfig memory mintConfig,
     Allocation[] memory allocations
   ) Ownable(initialOwner) {
-    if (address(0) == token) {
-      revert AdminContract__InvalidAddress();
+    if (token == address(0)) {
+      revert TokenMinter__InvalidAddress();
     }
 
     i_token = token;
@@ -97,21 +96,25 @@ contract TokenMinter is Ownable2Step {
   /// @dev Available only for operators
   function mint() external onlyOperator {
     MintConfig memory mintConfig = s_mintConfig;
-    if (!_canMint(mintConfig)) revert AdminContract__MintNotAvailable();
+    if (!_canMint(mintConfig)) {
+      revert TokenMinter__MintNotAvailable();
+    }
 
+    s_lastMintTime = uint128(block.timestamp); // safe
+    uint32 newMintCount = s_mintCount + 1;
+    s_mintCount = newMintCount;
+
+    emit Mint(mintConfig.mintAmount, newMintCount);
+
+    IERC20Mintable token = IERC20Mintable(i_token);
     uint256 restAmount = mintConfig.mintAmount;
     uint256 length = s_allocations.length;
-
-    emit Mint(mintConfig.mintAmount, s_mintCounter);
-
-    s_lastMintTime = block.timestamp;
-    s_mintCounter += 1;
 
     for (uint256 i = 0; i < length; ) {
       Allocation memory allocation = s_allocations[i];
       uint256 mintAmount = (i == length - 1) ? restAmount : (mintConfig.mintAmount * allocation.share) / ONE;
 
-      IERC20Mintable(i_token).mint(allocation.recipient, mintAmount);
+      token.mint(allocation.recipient, mintAmount);
       restAmount -= mintAmount;
 
       unchecked {
@@ -124,7 +127,7 @@ contract TokenMinter is Ownable2Step {
   /// @param newTokenOwner new token owner address
   function transferTokenOwnership(address newTokenOwner) external onlyOwner {
     if (newTokenOwner == address(0)) {
-      revert AdminContract__InvalidAddress();
+      revert TokenMinter__InvalidAddress();
     }
 
     Ownable(i_token).transferOwnership(newTokenOwner);
@@ -136,10 +139,11 @@ contract TokenMinter is Ownable2Step {
   /// @param add True to add operator, false to remove
   function addOperator(address operator, bool add) external onlyOwner {
     if (operator == address(0)) {
-      revert AdminContract__InvalidAddress();
+      revert TokenMinter__InvalidAddress();
     }
 
     s_operators[operator] = add;
+    emit OperatorChanged(operator, add);
   }
 
   /// Updates allocations
@@ -161,12 +165,6 @@ contract TokenMinter is Ownable2Step {
     return _canMint(s_mintConfig);
   }
 
-  /// Ensures that the address is operator
-  /// @param _operator Address of the operator
-  function ensureOperator(address _operator) private view {
-    if (!s_operators[_operator]) revert AdminContract__Unauthorized();
-  }
-
   function getToken() public view returns (address) {
     return i_token;
   }
@@ -184,12 +182,15 @@ contract TokenMinter is Ownable2Step {
   }
 
   function getMintCount() public view returns (uint32) {
-    return s_mintCounter;
+    return s_mintCount;
+  }
+
+  function isOperator(address operator) public view returns (bool) {
+    return s_operators[operator];
   }
 
   function _updateMintConfig(MintConfig memory mintConfig) private {
-    if (mintConfig.startTime == 0) revert AdminContract__InvalidMintConfig();
-    if (mintConfig.periodLength == 0) revert AdminContract__InvalidMintConfig();
+    if (mintConfig.periodLength == 0) revert TokenMinter__InvalidMintConfig();
 
     s_mintConfig = mintConfig;
   }
@@ -197,7 +198,7 @@ contract TokenMinter is Ownable2Step {
   function _updateAllocations(Allocation[] memory allocations) private {
     uint256 totalShare = 0;
     for (uint256 i = 0; i < allocations.length; ) {
-      if (allocations[i].recipient == address(0)) revert AdminContract__InvalidAddress();
+      if (allocations[i].recipient == address(0)) revert TokenMinter__InvalidAddress();
 
       totalShare += allocations[i].share;
 
@@ -206,13 +207,17 @@ contract TokenMinter is Ownable2Step {
       }
     }
 
-    if (totalShare != ONE) revert AdminContract__WrongAllocationsShare();
+    if (totalShare != ONE) revert TokenMinter__InvalidShares();
 
     s_allocations = allocations;
   }
 
+  function _ensureOperator(address _operator) private view {
+    if (!s_operators[_operator]) revert TokenMinter__Unauthorized();
+  }
+
   function _canMint(MintConfig memory mintConfig) private view returns (bool) {
-    if (s_mintCounter >= mintConfig.maxCountOfMints) return false;
+    if (s_mintCount >= mintConfig.maxCountOfMints) return false;
 
     uint256 curPeriodBegin = (block.timestamp / mintConfig.periodLength) *
       mintConfig.periodLength +
