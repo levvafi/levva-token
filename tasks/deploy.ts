@@ -235,7 +235,7 @@ async function getTokenMinterDeployConfig(provider: Provider): Promise<TokenMint
       LEVVA_TOKEN: '0x948e00E3c38b714246814727e3DA84ab6A6C2486',
       initialOwner: '0xAD70a0ab951780fF3397882fc5372db83dEb0606',
       mintConfig: {
-        startTime: 1742774400n, 
+        startTime: 1742774400n,
         periodLength: 900n, // 15 min
         periodShift: 0n,
         maxCountOfMints: 20,
@@ -262,9 +262,9 @@ async function getTokenMinterDeployConfig(provider: Provider): Promise<TokenMint
       LEVVA_TOKEN: '0x6243558a24CC6116aBE751f27E6d7Ede50ABFC76', //LVVA token
       initialOwner: '0x32764Ce6edBb6BF39A824cc95246375067c4573e', //LVVA owner
       mintConfig: {
-        startTime: 1742774400n,
-        periodLength: 604800n,
-        periodShift: 345600n,
+        startTime: 1743379200n, // Mon Mar 31 2025 00:00:00 GMT+0000
+        periodLength: 604800n, // 1 week
+        periodShift: 345600n, // 4 days
         maxCountOfMints: 52,
         mintAmount: parseUnits('7211538.46', 18), // 7_211_538.46
       },
@@ -282,7 +282,7 @@ async function getTokenMinterDeployConfig(provider: Provider): Promise<TokenMint
           share: parseUnits('0.1333', 18), //13.33%
         },
       ],
-      initialOperators: ['0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210'],
+      initialOperators: ['0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210', '0x0562F16415fCf6fb5ACAF433e4796f8f328b7C7d'],
     };
   } else {
     throw new Error(`Unsupported chain id: ${chainId}`);
