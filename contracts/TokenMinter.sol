@@ -16,9 +16,9 @@ contract TokenMinter is Ownable2Step {
   struct MintConfig {
     /// @dev Before the start time minting is not available
     uint64 startTime;
-    /// @dev Period length in seconds
+    /// @dev Period length in seconds. Should be greater than zero, should be greater than periodShift
     uint64 periodLength;
-    /// @dev Period shift in seconds for making beginning of period more flexible
+    /// @dev Period shift in seconds for making beginning of period more flexible. Should be less than periodLength
     uint64 periodShift;
     /// @dev Maximum count of mints
     uint64 maxCountOfMints;
@@ -205,7 +205,7 @@ contract TokenMinter is Ownable2Step {
   }
 
   function _updateMintConfig(MintConfig memory mintConfig) private {
-    if (mintConfig.periodLength == 0) revert TokenMinter__InvalidMintConfig();
+    if (mintConfig.periodShift >= mintConfig.periodLength) revert TokenMinter__InvalidMintConfig();
 
     s_mintConfig = mintConfig;
   }
@@ -234,9 +234,7 @@ contract TokenMinter is Ownable2Step {
   function _canMint(MintConfig memory mintConfig) private view returns (bool) {
     if (s_mintCount >= mintConfig.maxCountOfMints) return false;
 
-    uint256 curPeriodBegin = (block.timestamp / mintConfig.periodLength) *
-      mintConfig.periodLength +
-      mintConfig.periodShift;
+    uint256 curPeriodBegin = block.timestamp - (block.timestamp % mintConfig.periodLength) + mintConfig.periodShift;
 
     if (block.timestamp < mintConfig.startTime) return false;
 
