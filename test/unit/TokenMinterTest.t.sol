@@ -68,6 +68,46 @@ contract TokenMinterTest is Test {
     _;
   }
 
+  function testConstructor() public {
+    // Arrange
+    TokenMinter.MintConfig memory mintConfig = TokenMinter.MintConfig({
+      startTime: 1,
+      periodLength: 1,
+      periodShift: 0,
+      maxCountOfMints: 1,
+      mintAmount: 1
+    });
+    address token1 = address(25);
+    address owner = address(1);
+    TokenMinter.Allocation[] memory allocations1 = new TokenMinter.Allocation[](2);
+    allocations1[0] = TokenMinter.Allocation({recipient: address(20), share: 4 * 10 ** 17});
+    allocations1[1] = TokenMinter.Allocation({recipient: address(21), share: 6 * 10 ** 17});
+
+    address[] memory operators1 = new address[](3);
+    operators1[0] = address(11);
+    operators1[1] = address(22);
+    operators1[2] = address(32);
+
+    // Act
+    TokenMinter tm = new TokenMinter(token1, owner, mintConfig, allocations1, operators1);
+    // Assert
+    assertEq(tm.getToken(), token1);
+    assertEq(tm.owner(), owner);
+    assertEq(tm.getMintConfig().startTime, mintConfig.startTime);
+    assertEq(tm.getMintConfig().periodLength, mintConfig.periodLength);
+    assertEq(tm.getMintConfig().periodShift, mintConfig.periodShift);
+    assertEq(tm.getMintConfig().maxCountOfMints, mintConfig.maxCountOfMints);
+    assertEq(tm.getMintConfig().mintAmount, mintConfig.mintAmount);
+    assertEq(tm.getAllocations().length, allocations1.length);
+    assertEq(tm.getAllocations()[0].recipient, allocations1[0].recipient);
+    assertEq(tm.getAllocations()[0].share, allocations1[0].share);
+    assertEq(tm.getAllocations()[1].recipient, allocations1[1].recipient);
+    assertEq(tm.getAllocations()[1].share, allocations1[1].share);
+    assertEq(tm.isOperator(operators1[0]), true);
+    assertEq(tm.isOperator(operators1[1]), true);
+    assertEq(tm.isOperator(operators1[2]), true);
+  }
+
   function testConstructorShouldFailWhenTokenAddressIsZero() public {
     // Arrange
     // Act/Assert

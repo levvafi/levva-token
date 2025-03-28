@@ -94,7 +94,7 @@ contract TokenMinter is Ownable2Step {
     _updateAllocations(allocations);
 
     uint256 length = operators.length;
-    for (uint256 i; i < length; i++) {
+    for (uint256 i; i < length; ) {
       _addOperator(operators[i], true);
 
       unchecked {
