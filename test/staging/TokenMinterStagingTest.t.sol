@@ -28,17 +28,19 @@ contract TokenMinterStagingTest is Test {
       mintAmount: 7_211_538_46 * 10 ** 16 // 7_211_538,46 * 10^18
     });
 
-  TokenMinter.Allocation[] public initialAllocations;
-
   function setUp() public {
     vm.skip(!isEthMainnet());
     vm.warp(weeklySchedule.startTime + 1);
 
-    initialAllocations.push(TokenMinter.Allocation({recipient: RECIPIENT1, share: 73_33 * 10 ** 14}));
-    initialAllocations.push(TokenMinter.Allocation({recipient: RECIPIENT2, share: 13_33 * 10 ** 14}));
-    initialAllocations.push(TokenMinter.Allocation({recipient: RECIPIENT3, share: 13_34 * 10 ** 14}));
+    TokenMinter.Allocation[] memory initialAllocations = new TokenMinter.Allocation[](3);
+    initialAllocations[0] = TokenMinter.Allocation({recipient: RECIPIENT1, share: 73_33 * 10 ** 14});
+    initialAllocations[1] = TokenMinter.Allocation({recipient: RECIPIENT2, share: 13_33 * 10 ** 14});
+    initialAllocations[2] = TokenMinter.Allocation({recipient: RECIPIENT3, share: 13_34 * 10 ** 14});
 
-    tokenMinter = new TokenMinter(address(token), OWNER, weeklySchedule, initialAllocations);
+    address[] memory operators = new address[](1);
+    operators[0] = OPERATOR;
+
+    tokenMinter = new TokenMinter(address(token), OWNER, weeklySchedule, initialAllocations, operators);
 
     vm.startPrank(OWNER);
     vm.deal(OWNER, 1 ether);

@@ -77,11 +77,13 @@ contract TokenMinter is Ownable2Step {
   /// @param initialOwner Initial owner of the contract
   /// @param mintConfig Initial minting configuration
   /// @param allocations Initial list of allocations
+  /// @param operators Initial list of operators
   constructor(
     address token,
     address initialOwner,
     MintConfig memory mintConfig,
-    Allocation[] memory allocations
+    Allocation[] memory allocations,
+    address[] memory operators
   ) Ownable(initialOwner) {
     if (token == address(0)) {
       revert TokenMinter__InvalidAddress();
@@ -90,6 +92,15 @@ contract TokenMinter is Ownable2Step {
     i_token = token;
     _updateMintConfig(mintConfig);
     _updateAllocations(allocations);
+
+    uint256 length = operators.length;
+    for (uint256 i; i < length; i++) {
+      _addOperator(operators[i], true);
+
+      unchecked {
+        ++i;
+      }
+    }
   }
 
   /// @notice Mint tokens according to the schedule
@@ -138,12 +149,7 @@ contract TokenMinter is Ownable2Step {
   /// @param operator Address of the operator
   /// @param add True to add operator, false to remove
   function addOperator(address operator, bool add) external onlyOwner {
-    if (operator == address(0)) {
-      revert TokenMinter__InvalidAddress();
-    }
-
-    s_operators[operator] = add;
-    emit OperatorChanged(operator, add);
+    _addOperator(operator, add);
   }
 
   /// Updates allocations
@@ -187,6 +193,15 @@ contract TokenMinter is Ownable2Step {
 
   function isOperator(address operator) public view returns (bool) {
     return s_operators[operator];
+  }
+
+  function _addOperator(address operator, bool add) private {
+    if (operator == address(0)) {
+      revert TokenMinter__InvalidAddress();
+    }
+
+    s_operators[operator] = add;
+    emit OperatorChanged(operator, add);
   }
 
   function _updateMintConfig(MintConfig memory mintConfig) private {

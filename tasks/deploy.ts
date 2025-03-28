@@ -249,7 +249,7 @@ task('deploy-token-minter', 'Deploy token minter contract')
     const initialAllocations: TokenMinter.AllocationStruct[] = [
       {
         recipient: '0xD20092A19e0488E1283E488e11583B43ba7EA849',
-        share: parseUnits('0.7334', 18), //73.33%
+        share: parseUnits('0.7334', 18), //73.34%
       },
       {
         recipient: '0x1D7e811aAbddDFd05a97A49C53645Db54deC0ac1',
@@ -257,16 +257,18 @@ task('deploy-token-minter', 'Deploy token minter contract')
       },
       {
         recipient: '0x4BB712660a5D16Fd38Bbf6Ede35235071B487dFD',
-        share: parseUnits('0.1333', 18), //13.34%
+        share: parseUnits('0.1333', 18), //13.33%
       },
     ];
+    const initialOperators: string[] = ['0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210'];
 
     const contractId = 'TokenMinter';
     const tokenMinter = (await new TokenMinter__factory(signer).deploy(
       LEVVA_TOKEN,
       initialOwner,
       mintConfig,
-      initialAllocations
+      initialAllocations,
+      initialOperators
     )) as any as TokenMinter;
     const tokenMinterAddress = await tokenMinter.getAddress();
     const tokenMinterDeploymentTx = tokenMinter.deploymentTransaction()!;
@@ -275,7 +277,13 @@ task('deploy-token-minter', 'Deploy token minter contract')
     const txReceipt = await tokenMinterDeploymentTx.wait();
     const txHash = tokenMinterDeploymentTx.hash;
 
-    await verifyContract(hre, tokenMinterAddress, [LEVVA_TOKEN, initialOwner, mintConfig, initialAllocations]);
+    await verifyContract(hre, tokenMinterAddress, [
+      LEVVA_TOKEN,
+      initialOwner,
+      mintConfig,
+      initialAllocations,
+      initialOperators,
+    ]);
 
     const deploymentData = {
       [contractId]: {

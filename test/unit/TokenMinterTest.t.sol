@@ -34,6 +34,7 @@ contract TokenMinterTest is Test {
     });
 
   TokenMinter.Allocation[] public initialAllocations;
+  address[] public operators;
 
   function setUp() public {
     vm.warp(1742774400);
@@ -44,7 +45,9 @@ contract TokenMinterTest is Test {
     initialAllocations.push(TokenMinter.Allocation({recipient: RECIPIENT2, share: 13_33 * 10 ** 14}));
     initialAllocations.push(TokenMinter.Allocation({recipient: RECIPIENT3, share: 13_34 * 10 ** 14}));
 
-    tokenMinter = new TokenMinter(address(token), OWNER, weeklySchedule, initialAllocations);
+    operators.push(OPERATOR1);
+
+    tokenMinter = new TokenMinter(address(token), OWNER, weeklySchedule, initialAllocations, operators);
 
     vm.startPrank(OWNER);
     vm.deal(OWNER, 1 ether);
@@ -69,14 +72,22 @@ contract TokenMinterTest is Test {
     // Arrange
     // Act/Assert
     vm.expectRevert(TokenMinter.TokenMinter__InvalidAddress.selector);
-    new TokenMinter(address(0), OWNER, weeklySchedule, initialAllocations);
+    new TokenMinter(address(0), OWNER, weeklySchedule, initialAllocations, operators);
   }
 
   function testConstructorShouldFailWhenInitialOwnerIsZero() public {
     // Arrange
     // Act/Assert
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
-    new TokenMinter(address(1), address(0), weeklySchedule, initialAllocations);
+    new TokenMinter(address(1), address(0), weeklySchedule, initialAllocations, operators);
+  }
+
+  function testConstructorShouldFailWhenZeroOperatorAddress() public {
+    // Arrange
+    operators[0] = address(0);
+    // Act/Assert
+    vm.expectRevert(TokenMinter.TokenMinter__InvalidAddress.selector);
+    new TokenMinter(address(1), address(1), weeklySchedule, initialAllocations, operators);
   }
 
   function testMint() public fromOperator {
