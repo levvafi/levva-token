@@ -233,11 +233,21 @@ contract TokenMinter is Ownable2Step {
 
   function _canMint(MintConfig memory mintConfig) private view returns (bool) {
     if (s_mintCount >= mintConfig.maxCountOfMints) return false;
-
-    uint256 curPeriodBegin = block.timestamp - (block.timestamp % mintConfig.periodLength) + mintConfig.periodShift;
-
     if (block.timestamp < mintConfig.startTime) return false;
 
+    /*
+     * ts - current block timestamp
+     * N  - number of period starting from zero timestamp
+     * periodLength - period length in seconds
+     * periodShift - period shift in seconds
+     *
+     * ts >= N * periodLength + periodShift
+     * N = floor[(ts - periodShift) / periodLength]
+     * curPeriodBegin = N * periodLength + periodShift =
+     *  = floor[(ts - periodShift) / periodLength] * periodLength + periodShift =
+     *  = ts - ((ts - periodShift) % periodLength)
+     */
+    uint256 curPeriodBegin = block.timestamp - ((block.timestamp - mintConfig.periodShift) % mintConfig.periodLength);
     if (s_lastMintTime >= curPeriodBegin) return false;
 
     return true;
