@@ -27,3 +27,6 @@ out/
 
 # Docs
 docs/
+
+/tasks/*.json
+/tasks/*.csv
