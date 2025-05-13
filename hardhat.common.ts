@@ -2,6 +2,7 @@ import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 import 'hardhat-contract-sizer';
 import { config as dotEnvConfig } from 'dotenv';
+import '@nomicfoundation/hardhat-foundry';
 
 dotEnvConfig();
 
@@ -31,7 +32,7 @@ const config: HardhatUserConfig & { contractSizer: any } = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: false,
-    only: ['Levva', 'Vesting', 'Staking'],
+    only: ['Levva', 'Vesting', 'Staking', 'TokenMinter'],
     except: ['Mock', 'Test'],
   },
   sourcify: {

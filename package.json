@@ -12,6 +12,7 @@
     "@ethersproject/providers": "^5.7.2",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.7",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-foundry": "^1.1.3",
     "@nomicfoundation/hardhat-ignition": "^0.15.4",
     "@nomicfoundation/hardhat-ignition-ethers": "^0.15.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.11",
@@ -28,6 +29,7 @@
     "@uniswap/snapshot-gas-cost": "^1.0.0",
     "@uniswap/v3-periphery": "^1.4.3",
     "chai": "^4.3.7",
+    "dotenv": "^16.3.1",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^9.1.0",
     "ethers": "^6.13.2",
@@ -38,13 +40,12 @@
     "mocha-chai-jest-snapshot": "^1.1.4",
     "prettier": "^3.3.3",
     "prettier-plugin-solidity": "1.3.1",
+    "prompts": "^2.4.2",
     "solhint": "5.0.2",
     "solhint-plugin-prettier": "0.1.0",
     "solidity-coverage": "^0.8.12",
     "ts-node": "^10.9.1",
     "typechain": "^8.1.1",
-    "typescript": "^5.5.4",
-    "dotenv": "^16.3.1",
-    "prompts": "^2.4.2"
+    "typescript": "^5.5.4"
   }
 }

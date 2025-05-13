@@ -1,7 +1,15 @@
 import { task } from 'hardhat/config';
-import { ContractTransactionReceipt, ethers, formatEther, parseEther, Provider, toUtf8Bytes } from 'ethers';
+import { ContractTransactionReceipt, ethers, formatEther, parseEther, parseUnits, Provider, toUtf8Bytes } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { ERC20__factory, LevvaToken, LevvaToken__factory, Staking, Staking__factory } from '../typechain-types';
+import {
+  ERC20__factory,
+  LevvaToken,
+  LevvaToken__factory,
+  Staking,
+  Staking__factory,
+  TokenMinter,
+  TokenMinter__factory,
+} from '../typechain-types';
 import * as fs from 'fs';
 import path from 'path';
 import { CREATE_X_ABI, CREATE_X_ADDRESS } from './createX';
@@ -208,6 +216,140 @@ task('deploy-open-staking', 'Deploy open staking contract')
     console.log(`Spent for deploy: ${formatEther(balanceBefore - balanceAfter)} Eth`);
     console.log(`Done!`);
   });
+
+type TokenMinterDeployConfig = {
+  LEVVA_TOKEN: string;
+  initialOwner: string;
+  mintConfig: TokenMinter.MintConfigStruct;
+  initialAllocations: TokenMinter.AllocationStruct[];
+  initialOperators: string[];
+};
+
+async function getTokenMinterDeployConfig(provider: Provider): Promise<TokenMinterDeployConfig> {
+  const SEPOLIA_CHAIN_ID = 11155111n;
+  const ETH_CHAIN_ID = 1n;
+
+  const { chainId } = await provider.getNetwork();
+  if (chainId == SEPOLIA_CHAIN_ID) {
+    return {
+      LEVVA_TOKEN: '0x948e00E3c38b714246814727e3DA84ab6A6C2486',
+      initialOwner: '0xAD70a0ab951780fF3397882fc5372db83dEb0606',
+      mintConfig: {
+        startTime: 1742774400n,
+        periodLength: 900n, // 15 min
+        periodShift: 0n,
+        maxCountOfMints: 20,
+        mintAmount: parseUnits('1000000.5', 18), // 1_000_000.5
+      },
+      initialAllocations: [
+        {
+          recipient: '0xD20092A19e0488E1283E488e11583B43ba7EA849',
+          share: parseUnits('0.7334', 18), //73.34%
+        },
+        {
+          recipient: '0x1D7e811aAbddDFd05a97A49C53645Db54deC0ac1',
+          share: parseUnits('0.1333', 18), //13.33%
+        },
+        {
+          recipient: '0x4BB712660a5D16Fd38Bbf6Ede35235071B487dFD',
+          share: parseUnits('0.1333', 18), //13.33%
+        },
+      ],
+      initialOperators: ['0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210', '0xAD70a0ab951780fF3397882fc5372db83dEb0606'],
+    };
+  } else if (chainId == ETH_CHAIN_ID) {
+    return {
+      LEVVA_TOKEN: '0x6243558a24CC6116aBE751f27E6d7Ede50ABFC76', //LVVA token
+      initialOwner: '0x32764Ce6edBb6BF39A824cc95246375067c4573e', //LVVA owner
+      mintConfig: {
+        startTime: 1743379200n, // Mon Mar 31 2025 00:00:00 GMT+0000
+        periodLength: 604800n, // 1 week
+        periodShift: 345600n, // 4 days
+        maxCountOfMints: 52,
+        mintAmount: parseUnits('7211538.46', 18), // 7_211_538.46
+      },
+      initialAllocations: [
+        {
+          recipient: '0xD20092A19e0488E1283E488e11583B43ba7EA849',
+          share: parseUnits('0.7334', 18), //73.34%
+        },
+        {
+          recipient: '0x1D7e811aAbddDFd05a97A49C53645Db54deC0ac1',
+          share: parseUnits('0.1333', 18), //13.33%
+        },
+        {
+          recipient: '0x4BB712660a5D16Fd38Bbf6Ede35235071B487dFD',
+          share: parseUnits('0.1333', 18), //13.33%
+        },
+      ],
+      initialOperators: ['0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210', '0x0562F16415fCf6fb5ACAF433e4796f8f328b7C7d'],
+    };
+  } else {
+    throw new Error(`Unsupported chain id: ${chainId}`);
+  }
+}
+
+// Example:
+// npx hardhat --network sepolia --config hardhat.config.ts deploy-token-minter --keystore <path to keystore>
+taskWithSigner('deploy-token-minter', 'Deploy token minter contract').setAction(
+  async (taskArgs: SignerArgs, hre: HardhatRuntimeEnvironment) => {
+    const provider: Provider = hre.ethers.provider;
+    const signer = await getSigner(taskArgs, provider);
+
+    const startBlockNumber = await provider.getBlockNumber();
+    const networkName = hre.network.name;
+    const configDir = `../deploy/${hre.network.name}`;
+
+    console.log(`Deploy on network "${networkName}"`);
+    console.log(`Current block number is ${startBlockNumber}\n\n`);
+
+    const balanceBefore = await signer.provider!.getBalance(signer);
+    console.log(`Balance before: ${formatEther(balanceBefore)} Eth`);
+
+    // Contract arguments
+    const config = await getTokenMinterDeployConfig(provider);
+
+    const contractId = 'TokenMinter';
+    const tokenMinter = (await new TokenMinter__factory(signer).deploy(
+      config.LEVVA_TOKEN,
+      config.initialOwner,
+      config.mintConfig,
+      config.initialAllocations,
+      config.initialOperators
+    )) as any as TokenMinter;
+    const tokenMinterAddress = await tokenMinter.getAddress();
+    const tokenMinterDeploymentTx = tokenMinter.deploymentTransaction()!;
+    await tokenMinter.waitForDeployment();
+
+    const txReceipt = await tokenMinterDeploymentTx.wait();
+    const txHash = tokenMinterDeploymentTx.hash;
+
+    await verifyContract(hre, tokenMinterAddress, [
+      config.LEVVA_TOKEN,
+      config.initialOwner,
+      config.mintConfig,
+      config.initialAllocations,
+      config.initialOperators,
+    ]);
+
+    const deploymentData = {
+      [contractId]: {
+        address: await tokenMinter.getAddress(),
+        txHash: txHash,
+        blockNumber: tokenMinterDeploymentTx.blockNumber!,
+      },
+    };
+
+    await saveDeploymentData(contractId, deploymentData, configDir);
+
+    const balanceAfter = await signer.provider!.getBalance(signer);
+    console.log(`Balance after: ${formatEther(balanceAfter)} Eth`);
+    console.log(`Gas used for deploy: ${txReceipt?.gasUsed} gas`);
+
+    console.log(`Spent for deploy: ${formatEther(balanceBefore - balanceAfter)} Eth`);
+    console.log(`Done!`);
+  }
+);
 
 async function saveDeploymentData(
   contractId: string,

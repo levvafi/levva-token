@@ -1,20 +1,22 @@
 import '@nomicfoundation/hardhat-toolbox';
 import 'hardhat-contract-sizer';
 import * as defaultConfig from './hardhat.common';
+import { config as dotEnvConfig } from 'dotenv';
 import './tasks/deploy';
-import './tasks/vesting';
+
+dotEnvConfig();
 
 const config = {
   ...defaultConfig.default,
   networks: {
     ethereum: {
-      url: 'https://rpc.ankr.com/eth',
+      url: process.env.ETH_RPC_URL,
     },
     holesky: {
-      url: 'https://1rpc.io/holesky',
+      url: process.env.HOLESKY_RPC_URL,
     },
     sepolia: {
-      url: 'https://rpc.ankr.com/eth_sepolia',
+      url: process.env.SEPOLIA_RPC_URL,
     },
   },
 };
